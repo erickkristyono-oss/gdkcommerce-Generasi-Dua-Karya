@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Masuk / Daftar — GDK Commerce</title>
+  <meta name="description" content="Masuk atau daftar akun GDK Commerce untuk membeli produk digital.">
+  <meta name="theme-color" content="#0084FF">
+  <link rel="icon" href="favicon.png" type="image/png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fustat:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body data-page="login">
+<div class="page">
+  <div class="bg-glow" aria-hidden="true"><span class="e1"></span><span class="e2"></span><span class="e3"></span></div>
+  <div id="site-header"></div>
+  <main>
+    <section class="auth-wrap">
+      <div class="container" style="display:grid;place-items:center">
+        <div class="auth-card reveal" id="authCard">
+          <h1 id="authTitle">Selamat datang kembali</h1>
+          <p id="authSub">Masuk untuk melanjutkan transaksi Anda.</p>
+          <div class="auth-switch" role="tablist">
+            <button type="button" data-mode="masuk" class="active">Masuk</button>
+            <button type="button" data-mode="daftar">Daftar</button>
+          </div>
+
+          <form id="formLogin" novalidate>
+            <div class="field"><label for="lEmail">Email</label><input id="lEmail" name="email" type="email" autocomplete="email" placeholder="email@contoh.com"><span class="err">Masukkan email yang valid</span></div>
+            <div class="field"><label for="lPass">Kata Sandi</label><div class="pw-wrap"><input id="lPass" name="password" type="password" autocomplete="current-password" placeholder="••••••••"><button type="button">Lihat</button></div><span class="err">Kata sandi wajib diisi</span></div>
+            <button type="submit" class="btn-primary block">Masuk <span class="arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></button>
+            <p class="auth-foot">Belum punya akun? <a href="#" data-switch="daftar">Daftar sekarang</a></p>
+          </form>
+
+          <div id="form2fa" hidden></div>
+
+          <form id="formRegister" novalidate hidden>
+            <div class="field"><label for="rName">Nama Lengkap</label><input id="rName" name="name" autocomplete="name" placeholder="Nama sesuai identitas"><span class="err">Nama minimal 3 karakter</span></div>
+            <div class="field"><label for="rEmail">Email</label><input id="rEmail" name="email" type="email" autocomplete="email" placeholder="email@contoh.com"><span class="err">Masukkan email yang valid</span></div>
+            <div class="field"><label for="rPhone">Nomor HP</label><input id="rPhone" name="phone" inputmode="numeric" autocomplete="tel" placeholder="081234567890"><span class="err">Format nomor HP: 08xxxxxxxxxx</span></div>
+            <div class="row-2">
+              <div class="field"><label for="rPass">Kata Sandi</label><div class="pw-wrap"><input id="rPass" name="password" type="password" autocomplete="new-password" placeholder="Min. 8 karakter"><button type="button">Lihat</button></div><span class="err">Min. 8 karakter, kombinasi huruf &amp; angka</span></div>
+              <div class="field"><label for="rPass2">Ulangi Sandi</label><input id="rPass2" name="password2" type="password" autocomplete="new-password" placeholder="Ulangi sandi"><span class="err">Kata sandi tidak sama</span></div>
+            </div>
+            <label class="check-row"><input type="checkbox" name="agree"> <span>Saya menyetujui <a href="syarat-ketentuan.html" target="_blank">Syarat &amp; Ketentuan</a> dan <a href="kebijakan-privasi.html" target="_blank">Kebijakan Privasi</a> GDK Commerce.</span></label>
+            <button type="submit" class="btn-primary block">Buat Akun <span class="arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></button>
+            <p class="auth-foot">Sudah punya akun? <a href="#" data-switch="masuk">Masuk</a></p>
+          </form>
+        </div>
+      </div>
+    </section>
+  </main>
+  <div id="site-footer"></div>
+</div>
+<script src="assets/js/app.js"></script>
+</body>
+</html>

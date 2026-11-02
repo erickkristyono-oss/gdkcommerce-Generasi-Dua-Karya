@@ -1,0 +1,12 @@
+# Kredensial — jangan pernah di-commit
+api/config.php
+gdk-config.php
+.DS_Store
+local/data/
+local/config.php
+local/*.log
+local/*.pid
+storage/digital/*
+!storage/digital/.gitkeep
+assets/uploads/digital/*
+!assets/uploads/digital/.gitkeep

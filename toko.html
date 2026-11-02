@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Produk Digital — GDK Commerce</title>
+  <meta name="description" content="Toko produk digital GDK Commerce: game, plugin WordPress, software, layanan website, dan e-book. Pengiriman instan setelah pembayaran.">
+  <meta name="theme-color" content="#0084FF">
+  <link rel="icon" href="favicon.png" type="image/png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fustat:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body data-page="toko">
+<div class="page">
+  <div class="bg-glow" aria-hidden="true"><span class="e1"></span><span class="e2"></span><span class="e3"></span></div>
+  <div id="site-header"></div>
+  <main>
+    <section class="page-hero">
+      <div class="container">
+        <span class="eyebrow reveal">Toko Digital</span>
+        <h1 class="reveal d1">Produk digital pilihan</h1>
+        <p class="reveal d2">Game, plugin WordPress, software, layanan website, dan e-book. Bayar sekali, produk langsung dikirim ke akun Anda.</p>
+        <div class="seg-switch reveal d1" role="tablist" aria-label="Jenis produk">
+          <a href="produk.html" class="">Top Up &amp; Tagihan</a>
+          <a href="toko.html" class="active">Produk Digital</a>
+        </div>
+      </div>
+    </section>
+    <section class="section" style="padding-top:30px">
+      <div class="container">
+        <div class="toolbar">
+          <div class="tabs" id="dgTabs" role="tablist" aria-label="Kategori produk digital"></div>
+          <div class="dg-tools">
+            <label class="search"><span class="sr-only">Cari produk</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+              <input id="dgSearch" type="search" placeholder="Cari game, plugin, software…">
+            </label>
+            <select id="dgSort" class="dg-sort" aria-label="Urutkan">
+              <option value="">Rekomendasi</option><option value="popular">Terlaris</option><option value="newest">Terbaru</option>
+              <option value="price_asc">Harga terendah</option><option value="price_desc">Harga tertinggi</option>
+            </select>
+          </div>
+        </div>
+        <p class="dg-count" id="dgCount">&nbsp;</p>
+        <div class="dg-grid" id="dgGrid"></div>
+      </div>
+    </section>
+  </main>
+  <div id="site-footer"></div>
+</div>
+<script src="assets/js/app.js"></script>
+<script src="assets/js/digital.js"></script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+# ===== GDK Commerce API =====
+Options -Indexes
+
+# Lindungi file konfigurasi & bootstrap dari akses langsung
+<FilesMatch "^(config\.php|config\.sample\.php|bootstrap\.php|_guard\.php)$">
+  Require all denied
+</FilesMatch>
+
+<IfModule mod_headers.c>
+  Header always set Cache-Control "no-store"
+</IfModule>

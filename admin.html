@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel Admin — GDK Commerce</title>
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#0084FF">
+  <link rel="icon" href="favicon.png" type="image/png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fustat:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <link rel="stylesheet" href="assets/css/admin.css">
+</head>
+<body data-page="admin">
+<div class="page">
+  <div class="bg-glow" aria-hidden="true"><span class="e1"></span><span class="e2"></span><span class="e3"></span></div>
+  <div id="site-header"></div>
+  <main>
+    <section class="admin-wrap">
+      <div class="container">
+        <div class="admin-head">
+          <div>
+            <span class="eyebrow">Panel Admin</span>
+            <h1 id="adminTitle">Ringkasan</h1>
+          </div>
+          <div class="supplier-chip" id="supplierChip" hidden></div>
+        </div>
+        <nav class="tabs admin-tabs" id="adminTabs" aria-label="Menu admin">
+          <button class="tab" data-tab="ringkasan">Ringkasan</button>
+          <button class="tab" data-tab="pesanan">Pesanan</button>
+          <button class="tab" data-tab="refund">Refund <span class="count" id="refundCount" hidden></span></button>
+          <button class="tab" data-tab="produk">Produk &amp; Harga</button>
+          <button class="tab" data-tab="digital">Produk Digital <span class="count" id="digitalCount" hidden></span></button>
+          <button class="tab" data-tab="pengguna">Pengguna</button>
+          <button class="tab" data-tab="supplier">Supplier</button>
+        </nav>
+        <div id="adminView"><div class="empty">Memuat…</div></div>
+      </div>
+    </section>
+  </main>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="assets/js/app.js"></script>
+<script src="assets/js/admin.js"></script>
+</body>
+</html>

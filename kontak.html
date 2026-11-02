@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kontak Kami — GDK Commerce</title>
+  <meta name="description" content="Hubungi GDK Commerce: alamat, email, telepon dan WhatsApp customer service.">
+  <meta name="theme-color" content="#0084FF">
+  <link rel="icon" href="favicon.png" type="image/png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fustat:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body data-page="kontak">
+<div class="page">
+  <div class="bg-glow" aria-hidden="true"><span class="e1"></span><span class="e2"></span><span class="e3"></span></div>
+  <div id="site-header"></div>
+  <main>
+    <section class="page-hero">
+      <div class="container">
+        <span class="eyebrow reveal">Kontak Kami</span>
+        <h1 class="reveal d1">Ada yang bisa kami bantu?</h1>
+        <p class="reveal d2">Tim support kami siap membantu pertanyaan seputar transaksi, kemitraan, maupun kendala akun Anda.</p>
+      </div>
+    </section>
+
+    <section class="section" style="padding-top:30px">
+      <div class="container contact-grid">
+        <div class="panel reveal">
+          <h2>Informasi Kontak</h2>
+          <div class="info-item"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0114 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg></span><div><b>Alamat</b><span data-site="address"></span></div></div>
+          <div class="info-item"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4.5" width="19" height="15" rx="3"/><path d="M3 7l9 6 9-6"/></svg></span><div><b>Email</b><a data-site="email" href="#"></a></div></div>
+          <div class="info-item"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3.5h3.5l1.8 4.6-2.3 1.4a11 11 0 006.5 6.5l1.4-2.3 4.6 1.8V19a2 2 0 01-2 2A17 17 0 013 5.5a2 2 0 012-2z"/></svg></span><div><b>Telepon / WhatsApp</b><a data-site="phone" href="#"></a></div></div>
+          <div class="info-item"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span><div><b>Jam Layanan</b><span>Transaksi otomatis 24/7 · CS: Senin–Sabtu, 08.00–21.00 WIB</span></div></div>
+          <div class="map">
+            <iframe title="Lokasi GDK Commerce" loading="lazy" referrerpolicy="no-referrer-when-downgrade" src="https://maps.google.com/maps?q=Menara%20165%20Jakarta&t=&z=16&ie=UTF8&iwloc=&output=embed"></iframe>
+          </div>
+        </div>
+
+        <div class="panel reveal d1">
+          <h2>Kirim Pesan</h2>
+          <form id="contactForm" novalidate>
+            <div class="row-2">
+              <div class="field"><label for="cName">Nama Lengkap</label><input id="cName" name="name" autocomplete="name" placeholder="Nama Anda"><span class="err">Nama minimal 2 karakter</span></div>
+              <div class="field"><label for="cEmail">Email</label><input id="cEmail" name="email" type="email" autocomplete="email" placeholder="email@contoh.com"><span class="err">Email tidak valid</span></div>
+            </div>
+            <div class="field"><label for="cSubject">Topik</label>
+              <select id="cSubject" name="subject">
+                <option>Pertanyaan Umum</option><option>Kendala Transaksi</option><option>Kemitraan / Reseller</option><option>Akun &amp; Keamanan</option><option>Lainnya</option>
+              </select>
+            </div>
+            <div class="field"><label for="cMsg">Pesan</label><textarea id="cMsg" name="message" placeholder="Tuliskan pesan Anda. Untuk kendala transaksi, sertakan nomor invoice."></textarea><span class="err">Pesan minimal 10 karakter</span></div>
+            <div style="display:flex;flex-wrap:wrap;gap:12px">
+              <button type="submit" class="btn-primary">Kirim via Email <span class="arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></button>
+              <button type="submit" class="btn-outline" data-channel="wa">Kirim via WhatsApp</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <section class="section soft" id="faq">
+      <div class="container">
+        <div class="section-head reveal"><span class="eyebrow">FAQ</span><h2>Pertanyaan yang sering diajukan</h2></div>
+        <div class="faq reveal d1">
+          <details open><summary>Berapa lama proses transaksi?</summary><p>Sebagian besar transaksi diproses otomatis dalam hitungan detik setelah pembayaran terverifikasi. Pada kondisi gangguan dari penyedia, proses dapat memakan waktu hingga 1×24 jam.</p></details>
+          <details><summary>Metode pembayaran apa saja yang tersedia?</summary><p>Kami menerima QRIS, Virtual Account (BCA, BRI, Mandiri), serta e-wallet seperti DANA dan OVO.</p></details>
+          <details><summary>Bagaimana jika saya salah memasukkan nomor tujuan?</summary><p>Transaksi yang sudah berhasil ke nomor/ID yang dimasukkan tidak dapat dibatalkan. Pastikan data tujuan sudah benar sebelum membayar. Hubungi CS kami jika membutuhkan bantuan.</p></details>
+          <details><summary>Apakah saya wajib membuat akun?</summary><p>Ya. Akun diperlukan agar setiap transaksi tercatat di riwayat Anda dan memudahkan kami membantu jika terjadi kendala.</p></details>
+          <details><summary>Bagaimana cara menjadi reseller?</summary><p>Silakan hubungi kami melalui formulir di atas dengan topik "Kemitraan / Reseller" atau melalui WhatsApp.</p></details>
+        </div>
+      </div>
+    </section>
+  </main>
+  <div id="site-footer"></div>
+</div>
+<script src="assets/js/app.js"></script>
+</body>
+</html>
