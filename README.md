@@ -168,6 +168,37 @@ Halaman **Produk** punya dua bagian: *Top Up & Tagihan* (PPOB) dan *Produk Digit
 
 ---
 
+## Program Agen (mitra penjual)
+
+Pengguna bisa menjadi **agen** untuk menjual kembali produk PPOB GDK Commerce dengan harga khusus.
+
+| Langkah | Siapa | Di mana |
+|---|---|---|
+| 1. Ajukan diri (nama toko, kota, keterangan) | Pengguna | **Akun Saya → Jadi Agen GDK** |
+| 2. Setujui / tolak (wajib alasan) | Admin | **Admin → Agen** (badge merah = pengajuan menunggu) |
+| 3. Deposit saldo (min. Rp 10.000, kelipatan Rp 1.000) | Agen | **Akun Saya → Deposit Saldo** → halaman pembayaran |
+| 4. Transaksi pakai Saldo GDK dengan harga agen | Agen | Halaman **Produk** (banner "Harga Agen aktif") |
+
+**Harga agen**
+- Otomatis: `modal + 50% dari laba harga umum`, dibulatkan ke atas kelipatan Rp 50 (atur di config `agent.margin_share` & `agent.round`).
+  Contoh: modal 10.000, harga umum 11.000 → harga agen 10.500.
+- Manual per produk: **Admin → Produk & Harga → kolom Harga agen** (kosongkan = otomatis). Ditolak bila di bawah modal atau di atas harga umum.
+- Massal: **Markup Massal → Harga yang diubah: Harga agen**.
+- Pascabayar: **Pengaturan Brand → Admin agen** (kosongkan = sama dengan biaya admin umum).
+- Sinkron Digiflazz mengembalikan harga agen ke otomatis, kecuali produk yang **dikunci** 🔒.
+- Harga agen tidak pernah di bawah modal dan tidak pernah lebih mahal dari harga umum.
+
+**Deposit** memakai payment gateway yang sama dengan pesanan (saat ini **dummy** → tombol *Simulasikan Pembayaran*).
+Deposit tidak dihitung sebagai omzet; transaksi agen ditandai **Agen** dan bisa difilter di **Admin → Pesanan → Transaksi agen / Deposit agen**.
+Mencabut agen (**Admin → Agen → Cabut Agen**) mengembalikan pengguna ke harga umum; saldonya tetap.
+
+> **Sebelum live dengan saldo asli:** hubungkan payment gateway asli. Selama gateway dummy, deposit hanya saldo uji coba —
+> hapus dengan `DELETE FROM wallet_ledger; UPDATE users SET balance = 0;` sebelum go-live.
+
+**Upgrade database yang sudah berjalan:** jalankan `database/migrations/005_agent.sql` sekali di phpMyAdmin.
+
+---
+
 ## Saldo GDK, Refund Otomatis & Kirim Ulang
 
 ### Saldo GDK (dompet akun)

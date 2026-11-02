@@ -14,7 +14,15 @@ CREATE TABLE IF NOT EXISTS users (
   phone         VARCHAR(20)   NOT NULL,
   balance       INT UNSIGNED  NOT NULL DEFAULT 0,   -- Saldo GDK (refund otomatis, bisa dipakai bayar)
   password_hash VARCHAR(255)  NOT NULL,
-  role          ENUM('customer','admin') NOT NULL DEFAULT 'customer',
+  role          ENUM('customer','agent','admin') NOT NULL DEFAULT 'customer',
+  -- Program agen: pengajuan → disetujui admin (role = 'agent')
+  agent_status      ENUM('none','pending','approved','rejected') NOT NULL DEFAULT 'none',
+  agent_store       VARCHAR(100) NULL,               -- nama toko / konter agen
+  agent_city        VARCHAR(100) NULL,
+  agent_note        VARCHAR(500) NULL,               -- keterangan dari pemohon
+  agent_admin_note  VARCHAR(255) NULL,               -- alasan ditolak / dicabut
+  agent_applied_at  DATETIME     NULL,
+  agent_approved_at DATETIME     NULL,
   is_active     TINYINT(1)    NOT NULL DEFAULT 1,
   last_login_at DATETIME      NULL,
   totp_secret    VARCHAR(255) NULL,                 -- secret 2FA (terenkripsi)
@@ -23,7 +31,8 @@ CREATE TABLE IF NOT EXISTS users (
   recovery_codes TEXT         NULL,                 -- hash kode cadangan (JSON)
   created_at    DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at    DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  UNIQUE KEY uq_users_email (email)
+  UNIQUE KEY uq_users_email (email),
+  KEY idx_users_agent (agent_status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Pembatasan percobaan login / daftar (anti brute force)
@@ -64,6 +73,7 @@ CREATE TABLE IF NOT EXISTS brands (
   normalize     ENUM('none','digits') NOT NULL DEFAULT 'digits',  -- 'digits' = buang spasi/kurung (mis. ML "123 (456)" → "123456")
   check_name    TINYINT(1)   NOT NULL DEFAULT 0,                   -- 1 = cek nama pelanggan PLN prabayar
   admin_fee     INT UNSIGNED NOT NULL DEFAULT 0,                   -- biaya admin TAMBAHAN dari kita (pascabayar)
+  admin_fee_agent INT UNSIGNED NULL,                               -- biaya admin untuk agen (NULL = sama dengan admin_fee)
   -- Pemetaan ke price list Digiflazz (cocokkan, tidak case-sensitive)
   df_category   VARCHAR(60)  NULL,
   df_brand      VARCHAR(60)  NULL,
@@ -80,6 +90,7 @@ CREATE TABLE IF NOT EXISTS products (
   name         VARCHAR(150) NOT NULL,
   price_modal  INT UNSIGNED NOT NULL DEFAULT 0,    -- harga beli dari supplier
   price_sell   INT UNSIGNED NOT NULL DEFAULT 0,    -- harga jual ke pelanggan
+  price_agent  INT UNSIGNED NOT NULL DEFAULT 0,    -- harga agen (0 = otomatis: modal + markup agen)
   is_active    TINYINT(1)   NOT NULL DEFAULT 1,
   supplier_ok  TINYINT(1)   NOT NULL DEFAULT 1,    -- status dari supplier (gangguan = 0)
   price_locked TINYINT(1)   NOT NULL DEFAULT 0,    -- 1 = harga jual tidak ditimpa sync otomatis
@@ -150,8 +161,9 @@ CREATE TABLE IF NOT EXISTS digital_licenses (
 CREATE TABLE IF NOT EXISTS orders (
   id               BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   invoice          VARCHAR(32)  NOT NULL,           -- juga dipakai sebagai ref_id ke Digiflazz
-  kind             VARCHAR(10)  NOT NULL DEFAULT 'ppob', -- ppob | digital
+  kind             VARCHAR(10)  NOT NULL DEFAULT 'ppob', -- ppob | digital | deposit
   user_id          INT UNSIGNED NOT NULL,
+  is_agent         TINYINT(1)   NOT NULL DEFAULT 0,  -- 1 = dibeli dengan harga agen
   brand_id         INT UNSIGNED NULL,               -- NULL untuk produk digital
   product_id       INT UNSIGNED NULL,
   digital_product_id INT UNSIGNED NULL,
@@ -210,7 +222,7 @@ CREATE TABLE IF NOT EXISTS orders (
 CREATE TABLE IF NOT EXISTS wallet_ledger (
   id            BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   user_id       INT UNSIGNED NOT NULL,
-  type          VARCHAR(20)  NOT NULL,          -- refund | payment | refund_reversal | adjust
+  type          VARCHAR(20)  NOT NULL,          -- refund | payment | refund_reversal | adjust | deposit
   amount        INT          NOT NULL,          -- + masuk, − keluar
   balance_after INT UNSIGNED NOT NULL,
   ref           VARCHAR(64)  NOT NULL,          -- kunci idempoten

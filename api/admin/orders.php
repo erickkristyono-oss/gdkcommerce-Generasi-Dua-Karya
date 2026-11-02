@@ -55,6 +55,9 @@ if ($method === 'POST') {
     $o = Db::one('SELECT * FROM orders WHERE invoice = ?', [$invoice]);
     if (!$o || $o['status'] === 'inquiry') throw new HttpError('Pesanan tidak ditemukan.', 404);
     $id = (int)$o['id'];
+    if ($o['kind'] === 'deposit' && $action !== 'note') {
+        throw new HttpError('Pesanan deposit diproses otomatis setelah pembayaran. Untuk koreksi saldo, gunakan Pengguna → Saldo → Penyesuaian.', 409);
+    }
 
     switch ($action) {
         case 'deliver':
@@ -162,6 +165,10 @@ if ($status === 'refund') {
     $where[] = "o.refund_status = 'done'";
 } elseif ($status === 'digital_waiting') {
     $where[] = "o.kind = 'digital' AND o.status = 'processing'";
+} elseif ($status === 'deposit') {
+    $where[] = "o.kind = 'deposit'";
+} elseif ($status === 'agent') {
+    $where[] = "o.is_agent = 1 AND o.kind <> 'deposit'";
 } elseif (in_array($status, ['unpaid', 'processing', 'success', 'failed', 'expired'], true)) {
     $where[] = 'o.status = ?'; $p[] = $status;
 }
@@ -176,7 +183,7 @@ if ($to = Admin::date($_GET['to'] ?? null))     { $where[] = 'o.created_at < (? 
 $w = implode(' AND ', $where);
 
 $total = (int)Db::value("SELECT COUNT(*) FROM orders o JOIN users u ON u.id = o.user_id WHERE {$w}", $p);
-$sum = Db::one("SELECT COALESCE(SUM(o.total),0) AS t FROM orders o JOIN users u ON u.id = o.user_id WHERE {$w} AND o.status = 'success'", $p);
+$sum = Db::one("SELECT COALESCE(SUM(o.total),0) AS t FROM orders o JOIN users u ON u.id = o.user_id WHERE {$w} AND o.status = 'success' AND o.kind <> 'deposit'", $p);
 $rows = Db::all("SELECT o.*, u.name AS user_name, u.email AS user_email FROM orders o JOIN users u ON u.id = o.user_id
                  WHERE {$w} ORDER BY o.id DESC LIMIT {$per} OFFSET {$offset}", $p);
 

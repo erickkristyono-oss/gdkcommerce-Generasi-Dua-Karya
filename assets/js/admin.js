@@ -32,6 +32,8 @@
       if (o.status === "failed" && o.refund_status === "pending") extra = ` <span class="status bad">Perlu Refund</span>`;
       if (o.refund_status === "done") extra = ` <span class="status muted">${o.refund_method === "saldo" ? "Refund ke Saldo" : "Refund Manual"}</span>`;
       if (o.retry_count) extra += ` <span class="status muted" title="Dikirim ulang">↻${o.retry_count}</span>`;
+      if (o.kind === "deposit") extra += ` <span class="agent-chip">Deposit</span>`;
+      else if (o.is_agent) extra += ` <span class="agent-chip">Agen</span>`;
       return `<span class="status ${cls}">${label}</span>${extra}`;
     };
     const debounce = (fn, ms = 350) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
@@ -119,6 +121,10 @@
       const el = $("#digitalCount"); if (!el) return;
       el.hidden = !n; el.textContent = n > 99 ? "99+" : n; el.title = n + " pesanan digital menunggu dikirim";
     }
+    function setAgentCount(n) {
+      const el = $("#agentCount"); if (!el) return;
+      el.hidden = !n; el.textContent = n > 99 ? "99+" : n; el.title = n + " pengajuan agen menunggu";
+    }
     function setRefundCount(n) {
       const el = $("#refundCount");
       el.hidden = !n; el.textContent = n > 99 ? "99+" : n;
@@ -133,7 +139,7 @@
     async function tabRingkasan() {
       view.innerHTML = `<div class="empty">Memuat ringkasan…</div>`;
       const d = await api("admin/dashboard.php");
-      setSupplierChip(d.supplier); setRefundCount(d.alerts.refund_pending); setDigitalCount(d.alerts.digital_waiting);
+      setSupplierChip(d.supplier); setRefundCount(d.alerts.refund_pending); setDigitalCount(d.alerts.digital_waiting); setAgentCount(d.alerts.agents_pending);
       const R = d.ranges;
       const supplierTile = d.supplier.balance === null
         ? `<b style="font-size:18px;color:#b42318">Tidak terbaca</b><span>${esc(d.supplier.error || "")}</span>`
@@ -150,6 +156,7 @@
         ? `<button class="alert warn" data-goto="produk" data-state="unavailable"><span class="ic">${I.tag}</span><span><b>${d.alerts.unavailable} produk gangguan</b><br>Tidak tersedia di supplier</span></button>`
         : `<div class="alert ok"><span class="ic">${I.check}</span><span><b>Semua produk aktif tersedia</b><br>${d.alerts.unpaid} pesanan menunggu bayar</span></div>`);
 
+      if (d.alerts.agents_pending) alerts.unshift(`<button class="alert warn" data-goto="agen"><span class="ic">${I.shield}</span><span><b>${d.alerts.agents_pending} pengajuan agen menunggu</b><br>Tinjau &amp; setujui di tab Agen</span></button>`);
       if (d.alerts.digital_waiting) alerts.unshift(`<button class="alert warn" data-goto="pesanan" data-status="digital_waiting"><span class="ic">${I.download}</span><span><b>${d.alerts.digital_waiting} produk digital menunggu dikirim</b><br>Buka pesanan lalu klik Kirim Produk</span></button>`);
       const statusRows = [["success", "Berhasil"], ["processing", "Diproses"], ["unpaid", "Menunggu Bayar"], ["failed", "Gagal"], ["expired", "Kedaluwarsa"]]
         .map(([k, l]) => `<div><span>${l}</span><b>${num(d.status[k] || 0)}</b></div>`).join("");
@@ -178,7 +185,8 @@
           <section class="panel">
             <h2>Status pesanan · 30 hari</h2>
             <div class="status-list">${statusRows}</div>
-            <p style="color:var(--muted);font-size:13px;margin:14px 0 0">Pengguna: <b style="color:var(--ink)">${num(d.users.total)}</b> · baru 7 hari: <b style="color:var(--ink)">${num(d.users.new7)}</b></p>
+            <p style="color:var(--muted);font-size:13px;margin:14px 0 0">Pengguna: <b style="color:var(--ink)">${num(d.users.total)}</b> · baru 7 hari: <b style="color:var(--ink)">${num(d.users.new7)}</b> · agen: <b style="color:var(--ink)">${num(d.users.agents)}</b></p>
+            <p style="color:var(--muted);font-size:13px;margin:6px 0 0">Transaksi agen 30 hari: <b style="color:var(--ink)">${num(d.agent_sales.count)}</b> · omzet <b style="color:var(--ink)">${rupiah(d.agent_sales.omzet)}</b></p>
             <p style="color:var(--muted);font-size:13px;margin:6px 0 0" title="Total Saldo GDK milik pelanggan — dana yang wajib Anda sediakan">Total Saldo GDK pelanggan: <b style="color:var(--ink)">${rupiah(d.alerts.wallet_total)}</b> · refund otomatis 7 hari: <b style="color:var(--ink)">${num(d.alerts.auto_refunded7)}</b></p>
           </section>
         </div>
@@ -284,7 +292,7 @@
         ${refundMode ? `<div class="note">Pesanan gagal biasanya <b>otomatis direfund ke Saldo GDK</b>. Yang muncul di sini adalah pesanan yang belum terefund (mis. refund otomatis dimatikan, atau pesanan lama). Pilih <b>Refund ke Saldo</b>, atau transfer manual lalu klik <b>Refund Manual</b>. Bisa juga dicoba <b>Kirim Ulang</b> dari detail pesanan.</div>` : ""}
         <div class="filters" id="oFilters">
           ${refundMode ? "" : `<select id="fStatus" aria-label="Status">
-            ${[["", "Semua status"], ["digital_waiting", "Digital: menunggu dikirim"], ["unpaid", "Menunggu Bayar"], ["processing", "Diproses"], ["success", "Berhasil"], ["failed", "Gagal"], ["refund", "Perlu Refund"], ["refunded", "Sudah Refund"], ["expired", "Kedaluwarsa"]]
+            ${[["", "Semua status"], ["digital_waiting", "Digital: menunggu dikirim"], ["agent", "Transaksi agen"], ["deposit", "Deposit agen"], ["unpaid", "Menunggu Bayar"], ["processing", "Diproses"], ["success", "Berhasil"], ["failed", "Gagal"], ["refund", "Perlu Refund"], ["refunded", "Sudah Refund"], ["expired", "Kedaluwarsa"]]
               .map(([v, l]) => `<option value="${v}" ${st.status === v ? "selected" : ""}>${l}</option>`).join("")}</select>
           <span class="chips" id="fPreset">${[["today", "Hari ini"], ["7", "7 hari"], ["30", "30 hari"]].map(([v, l]) => `<button class="chip ${st.preset === v ? "active" : ""}" data-p="${v}">${l}</button>`).join("")}</span>
           <input type="date" id="fFrom" value="${esc(st.from)}" aria-label="Dari tanggal">
@@ -507,15 +515,16 @@
         if (sel.options.length <= 1) sel.insertAdjacentHTML("beforeend", d.brands.map((b) => `<option value="${esc(b.slug)}">${esc(b.name)} (${b.live}/${b.total})</option>`).join(""));
         sel.value = st.brand;
 
-        panel.innerHTML = `<div class="card-head"><span style="color:var(--ink-2);font-size:14px"><b>${num(d.total)}</b> produk · markup otomatis saat sinkron: Rp ${num(d.markup.flat)} + ${d.markup.percent}%</span>
+        panel.innerHTML = `<div class="card-head"><span style="color:var(--ink-2);font-size:14px"><b>${num(d.total)}</b> produk · markup otomatis saat sinkron: Rp ${num(d.markup.flat)} + ${d.markup.percent}% · harga agen otomatis: modal + ${d.agent_rule.share}% laba</span>
             <small style="color:var(--muted)">Kunci harga 🔒 agar tidak ditimpa sinkron otomatis</small></div>
           ${d.products.length ? `<div class="table-wrap"><table class="tx admin"><thead><tr>
-            <th>Produk</th><th class="num">Modal</th><th class="num">Harga jual</th><th class="num">Laba</th><th>Kunci</th><th>Aktif</th><th>Supplier</th><th></th></tr></thead>
+            <th>Produk</th><th class="num">Modal</th><th class="num">Harga jual</th><th class="num">Laba</th><th class="num" title="Kosongkan = otomatis (modal + sebagian laba harga umum)">Harga agen</th><th>Kunci</th><th>Aktif</th><th>Supplier</th><th></th></tr></thead>
             <tbody>${d.products.map((p) => `<tr data-sku="${esc(p.sku)}" data-modal="${p.price_modal}" data-type="${p.type}">
               <td>${esc(p.name)}<br><small>${esc(p.brand_name)} · <code>${esc(p.sku)}</code></small></td>
               <td class="num">${p.type === "postpaid" ? "<small>tagihan</small>" : rupiah(p.price_modal)}</td>
               <td class="num">${p.type === "postpaid" ? "<small>dari inquiry</small>" : `<input class="price-input" inputmode="numeric" value="${p.price_sell}" data-orig="${p.price_sell}" aria-label="Harga jual ${esc(p.name)}">`}</td>
               <td class="num margin">${p.type === "postpaid" ? "-" : marginHtml(p.price_sell, p.price_modal)}</td>
+              <td class="num">${p.type === "postpaid" ? "<small>biaya admin per brand</small>" : `<input class="price-input agent-input" inputmode="numeric" value="${p.price_agent || ""}" placeholder="${p.agent_price}" data-orig="${p.price_agent || ""}" aria-label="Harga agen ${esc(p.name)}" title="Kosongkan untuk harga otomatis"><br><small class="agent-margin">${(p.price_agent ? "" : "otomatis · ") + (p.price_modal ? "laba " + rupiah((p.price_agent || p.agent_price) - p.price_modal) : "")}</small>`}</td>
               <td><label class="switch" title="Kunci harga"><input type="checkbox" data-f="price_locked" ${p.price_locked ? "checked" : ""} data-orig="${p.price_locked ? 1 : 0}" aria-label="Kunci harga"><span></span></label></td>
               <td><label class="switch" title="Tampilkan di website"><input type="checkbox" data-f="is_active" ${p.is_active ? "checked" : ""} data-orig="${p.is_active ? 1 : 0}" aria-label="Aktif"><span></span></label></td>
               <td>${p.supplier_ok ? `<span class="status ok">Tersedia</span>` : `<span class="status bad">Gangguan</span>`}</td>
@@ -526,9 +535,19 @@
 
         $$("tr[data-sku]", panel).forEach((tr) => {
           const save = $(".save", tr);
-          const inp = $(".price-input", tr);
+          const inp = $(".price-input:not(.agent-input)", tr);
+          const ainp = $(".agent-input", tr);
           const check = () => {
             let dirty = false;
+            if (ainp) {
+              const raw = ainp.value.replace(/\D/g, "");
+              dirty = dirty || raw !== String(ainp.dataset.orig);
+              const sell = inp ? parseInt(inp.value.replace(/\D/g, ""), 10) || 0 : 0;
+              const av = raw ? +raw : parseInt(ainp.placeholder, 10) || 0;
+              const modal = +tr.dataset.modal;
+              $(".agent-margin", tr).textContent = (raw ? "" : "otomatis · ") + (modal ? "laba " + rupiah(av - modal) : "");
+              ainp.classList.toggle("err", !!raw && ((modal > 0 && +raw < modal) || (sell > 0 && +raw > sell)));
+            }
             if (inp) {
               const v = parseInt(inp.value.replace(/\D/g, ""), 10) || 0;
               dirty = dirty || v !== +inp.dataset.orig;
@@ -543,12 +562,14 @@
           save.addEventListener("click", async () => {
             const body = { action: "update_product", sku: tr.dataset.sku };
             if (inp) body.price_sell = parseInt(inp.value.replace(/\D/g, ""), 10) || 0;
+            if (ainp) body.price_agent = parseInt(ainp.value.replace(/\D/g, ""), 10) || 0;
             $$("input[type=checkbox]", tr).forEach((c) => { body[c.dataset.f] = c.checked; });
             save.disabled = true;
             try {
               const r = await api("admin/products.php", { method: "POST", body });
               toast(r.message, "ok");
               if (inp) { inp.dataset.orig = body.price_sell; inp.value = body.price_sell; }
+              if (ainp) { ainp.dataset.orig = body.price_agent || ""; ainp.value = body.price_agent || ""; }
               $$("input[type=checkbox]", tr).forEach((c) => { c.dataset.orig = c.checked ? 1 : 0; });
               check();
             } catch (err) { toast(err.message, "err"); }
@@ -573,8 +594,9 @@
 
     function markupDialog(reload) {
       const card = openModal(`${modalHead("Markup Massal", "Hitung ulang harga jual dari harga modal")}
-        <div class="note info">Harga jual = modal + markup tetap + persen, dibulatkan ke atas. Produk dengan harga <b>terkunci</b> dan produk pascabayar dilewati.</div>
+        <div class="note info">Harga = modal + markup tetap + persen, dibulatkan ke atas. Produk dengan harga <b>terkunci</b> dan produk pascabayar dilewati. Harga agen tidak akan melebihi harga jual umum.</div>
         <form id="mkForm" novalidate>
+          <div class="field"><label for="mkTarget">Harga yang diubah</label><select id="mkTarget"><option value="sell">Harga jual umum (pelanggan)</option><option value="agent">Harga agen</option></select></div>
           <div class="field"><label for="mkBrand">Berlaku untuk</label><select id="mkBrand"><option value="all">Semua brand prabayar</option>
             ${brandsCache.filter((b) => b.type === "prepaid").map((b) => `<option value="${esc(b.slug)}" ${productsState.brand === b.slug ? "selected" : ""}>${esc(b.name)}</option>`).join("")}</select></div>
           <div class="row-2">
@@ -596,9 +618,10 @@
         ev.preventDefault();
         const sel = $("#mkBrand", card);
         const target = sel.options[sel.selectedIndex].text;
-        if (!confirm(`Terapkan markup ke ${target}? Harga jual produk yang tidak dikunci akan diganti.`)) return;
+        const what = $("#mkTarget", card).value === "agent" ? "Harga agen" : "Harga jual";
+        if (!confirm(`Terapkan markup ke ${target}? ${what} produk yang tidak dikunci akan diganti.`)) return;
         try {
-          const r = await api("admin/products.php", { method: "POST", body: { action: "bulk_markup", brand: sel.value, ...vals() } });
+          const r = await api("admin/products.php", { method: "POST", body: { action: "bulk_markup", brand: sel.value, target: $("#mkTarget", card).value, ...vals() } });
           toast(r.message, "ok"); closeModal(); reload();
         } catch (err) { toast(err.message, "err"); }
       });
@@ -607,12 +630,13 @@
     function brandsDialog(reload) {
       const card = openModal(`${modalHead("Pengaturan Brand", "Tampilkan/sembunyikan brand, label terlaris, biaya admin & pemetaan Digiflazz")}
         <div class="note info">Kolom <b>Kategori DF</b> &amp; <b>Brand DF</b> harus sama dengan nama di price list Digiflazz (lihat laporan sinkron di tab Supplier). Kosongkan Kategori DF untuk mencocokkan berdasarkan brand saja.</div>
-        <div class="table-wrap"><table class="tx admin" style="min-width:900px"><thead><tr><th>Brand</th><th>Aktif</th><th>Terlaris</th><th class="num">Admin (pasca)</th><th>Kategori DF</th><th>Brand DF</th><th></th></tr></thead>
+        <div class="table-wrap"><table class="tx admin" style="min-width:900px"><thead><tr><th>Brand</th><th>Aktif</th><th>Terlaris</th><th class="num">Admin (pasca)</th><th class="num" title="Kosongkan = sama dengan admin umum">Admin agen</th><th>Kategori DF</th><th>Brand DF</th><th></th></tr></thead>
         <tbody>${brandsCache.map((b) => `<tr data-slug="${esc(b.slug)}">
           <td><b>${esc(b.name)}</b><br><small>${b.type === "postpaid" ? "Pascabayar" : "Prabayar"} · ${b.live}/${b.total} produk tampil</small></td>
           <td><label class="switch"><input type="checkbox" data-f="is_active" ${b.is_active ? "checked" : ""} aria-label="Aktif"><span></span></label></td>
           <td><label class="switch"><input type="checkbox" data-f="is_hot" ${b.is_hot ? "checked" : ""} aria-label="Terlaris"><span></span></label></td>
           <td class="num">${b.type === "postpaid" ? `<input class="price-input" style="width:90px" data-f="admin_fee" inputmode="numeric" value="${b.admin_fee}">` : "-"}</td>
+          <td class="num">${b.type === "postpaid" ? `<input class="price-input" style="width:90px" data-f="admin_fee_agent" inputmode="numeric" value="${b.admin_fee_agent ?? ""}" placeholder="sama">` : "-"}</td>
           <td><input class="text-input" data-f="df_category" value="${esc(b.df_category || "")}" placeholder="(semua)"></td>
           <td><input class="text-input" data-f="df_brand" value="${esc(b.df_brand || "")}" placeholder="mis. TELKOMSEL"></td>
           <td><button class="btn-primary btn-sm save" hidden>Simpan</button></td></tr>`).join("")}</tbody></table></div>`, true);
@@ -624,6 +648,7 @@
           const body = { action: "update_brand", slug: tr.dataset.slug };
           $$("[data-f]", tr).forEach((el) => { body[el.dataset.f] = el.type === "checkbox" ? el.checked : el.value.trim(); });
           if ("admin_fee" in body) body.admin_fee = parseInt(body.admin_fee, 10) || 0;
+          if ("admin_fee_agent" in body) body.admin_fee_agent = body.admin_fee_agent === "" ? "" : parseInt(body.admin_fee_agent, 10) || 0;
           save.disabled = true;
           try { const r = await api("admin/products.php", { method: "POST", body }); toast(r.message, "ok"); tr.classList.remove("dirty"); save.hidden = true; reload(); }
           catch (err) { toast(err.message, "err"); }
@@ -825,6 +850,86 @@
     }
 
     /* =========================================================
+       TAB: AGEN
+       ========================================================= */
+    const agentsState = { status: "pending", q: "", page: 1 };
+    const AGENT_STATUS = { pending: ["Menunggu", "wait"], approved: ["Agen aktif", "ok"], rejected: ["Ditolak / dicabut", "bad"] };
+    async function tabAgen() {
+      const st = agentsState;
+      view.innerHTML = `
+        <div class="filters">
+          <span class="chips" id="agStatus">${[["pending", "Menunggu"], ["approved", "Agen aktif"], ["rejected", "Ditolak / dicabut"], ["all", "Semua"]]
+            .map(([v, l]) => `<button class="chip ${st.status === v ? "active" : ""}" data-s="${v}">${l} <span class="chip-n" data-n="${v}"></span></button>`).join("")}</span>
+          <input class="grow" id="agQ" type="search" placeholder="Cari nama, email, HP, nama toko, kota…" value="${esc(st.q)}">
+        </div>
+        <section class="panel" id="agPanel"><div class="empty">Memuat agen…</div></section>`;
+      const panel = $("#agPanel");
+      const load = async () => {
+        loading(panel);
+        let d;
+        try { d = await api("admin/agents.php?" + new URLSearchParams({ status: st.status, q: st.q, page: st.page, per: 25 })); }
+        catch (err) { panel.innerHTML = `<div class="empty">${esc(err.message)}</div>`; loaded(panel); return; }
+        loaded(panel);
+        setAgentCount(d.counts.pending);
+        Object.entries(d.counts).forEach(([k, v]) => { const el = $(`[data-n="${k}"]`); if (el) el.textContent = v ? `(${num(v)})` : ""; });
+        panel.innerHTML = `
+          <div class="card-head"><span style="color:var(--ink-2);font-size:14px"><b>${num(d.counts.approved)}</b> agen aktif · total saldo agen <b>${rupiah(d.counts.balance)}</b></span>
+            <small style="color:var(--muted)">Harga agen otomatis = modal + ${d.rule.share}% dari laba harga umum · ubah per produk di tab Produk &amp; Harga</small></div>
+          ${d.enabled ? "" : `<div class="note bad">Program agen dinonaktifkan di config (<code>agent.enabled = false</code>). Agen yang sudah disetujui sementara melihat harga umum.</div>`}
+          ${d.agents.length ? `<div class="table-wrap"><table class="tx admin"><thead><tr>
+            <th>Pengguna</th><th>Toko / usaha</th><th>Status</th><th class="num">Saldo</th><th class="num">Transaksi 30 hari</th><th class="num">Total deposit</th><th></th></tr></thead>
+            <tbody>${d.agents.map((a) => {
+              const [label, cls] = AGENT_STATUS[a.status] || [a.status, "muted"];
+              return `<tr data-email="${esc(a.email)}">
+              <td><b>${esc(a.name)}</b>${a.is_active ? "" : ` <span class="status bad">Nonaktif</span>`}<br><small>${esc(a.email)}</small><br>
+                <small><a href="https://wa.me/62${esc(String(a.phone).replace(/^0/, ""))}" target="_blank" rel="noopener" style="color:var(--primary)">${esc(a.phone)}</a></small></td>
+              <td><b>${esc(a.store || "-")}</b><br><small>${esc(a.city || "")}</small>${a.note ? `<br><small style="white-space:normal;display:block;max-width:280px">“${esc(a.note)}”</small>` : ""}</td>
+              <td><span class="status ${cls}">${label}</span><br><small>${a.status === "approved" && a.approved_at ? "sejak " + fmtDate(a.approved_at) : a.applied_at ? "diajukan " + fmtDate(a.applied_at) : ""}</small>
+                ${a.admin_note && a.status === "rejected" ? `<br><small style="white-space:normal;display:block;max-width:220px">Alasan: ${esc(a.admin_note)}</small>` : ""}</td>
+              <td class="num"><a href="#" data-ledger="${esc(a.email)}" style="color:var(--primary)">${rupiah(a.balance)}</a></td>
+              <td class="num">${num(a.trx30)}<br><small>${rupiah(a.omzet30)} · laba ${rupiah(a.laba30)}</small></td>
+              <td class="num">${rupiah(a.deposit_total)}</td>
+              <td><div class="actions-row" style="flex-wrap:nowrap">
+                ${a.status === "pending" ? `<button class="btn-outline btn-sm btn-success" data-a="approve">Setujui</button><button class="btn-outline btn-sm btn-danger" data-a="reject">Tolak</button>` : ""}
+                ${a.status === "approved" ? `<button class="btn-outline btn-sm btn-danger" data-a="revoke">Cabut Agen</button>` : ""}
+                ${a.status === "rejected" ? `<button class="btn-outline btn-sm btn-success" data-a="approve">Setujui</button>` : ""}
+              </div></td></tr>`; }).join("")}</tbody></table></div>`
+          : `<div class="empty" style="padding:30px">${st.status === "pending" ? "Tidak ada pengajuan agen yang menunggu." : "Tidak ada data."}</div>`}`;
+        if (d.agents.length) panel.appendChild(pager(d, (pg) => { st.page = pg; load(); }));
+
+        $$("[data-a]", panel).forEach((b) => b.addEventListener("click", async () => {
+          const email = b.closest("tr").dataset.email;
+          const act = b.dataset.a;
+          let body = { email, action: act };
+          if (act === "approve") {
+            if (!confirm(`Setujui ${email} sebagai agen? Pengguna langsung mendapat harga agen dan bisa deposit saldo.`)) return;
+          } else {
+            const r = await ask({
+              title: act === "reject" ? "Tolak Pengajuan Agen" : "Cabut Status Agen",
+              message: act === "reject" ? `Alasan akan terlihat oleh <b>${esc(email)}</b> di halaman akunnya. Pemohon bisa mengajukan lagi.`
+                : `<b>${esc(email)}</b> kembali menjadi pelanggan biasa (harga umum). Saldo tetap ada dan bisa dipakai.`,
+              fields: [{ name: "note", label: "Alasan", required: true, min: 5, placeholder: act === "reject" ? "mis. Data usaha belum lengkap" : "mis. Tidak aktif 3 bulan", error: "Minimal 5 karakter" }],
+              confirm: act === "reject" ? "Tolak" : "Cabut Agen", danger: true
+            });
+            if (!r) return;
+            body.note = r.note;
+          }
+          try { const r = await api("admin/agents.php", { method: "POST", body }); toast(r.message, "ok"); closeModal(); load(); }
+          catch (err) { toast(err.message, "err"); }
+        }));
+      };
+      panel.addEventListener("click", (ev) => { const a = ev.target.closest("[data-ledger]"); if (a) { ev.preventDefault(); ledgerDialog(a.dataset.ledger, load); } });
+      $("#agStatus").addEventListener("click", (ev) => {
+        const b = ev.target.closest("[data-s]"); if (!b) return;
+        st.status = b.dataset.s; st.page = 1;
+        $$("#agStatus .chip").forEach((c) => c.classList.toggle("active", c === b));
+        load();
+      });
+      $("#agQ").addEventListener("input", debounce((ev) => { st.q = ev.target.value.trim(); st.page = 1; load(); }));
+      load();
+    }
+
+    /* =========================================================
        TAB: PENGGUNA
        ========================================================= */
     const usersState = { q: "", page: 1 };
@@ -844,7 +949,7 @@
           <tbody>${d.users.map((u) => `<tr data-email="${esc(u.email)}">
             <td><b>${esc(u.name)}</b>${u.is_self ? ` <small>(Anda)</small>` : ""}<br><small>${esc(u.email)}</small></td>
             <td>${esc(u.phone)}</td>
-            <td>${u.role === "admin" ? `<span class="status ok">Admin</span>` : `<span class="status muted">Pelanggan</span>`}${u.twofa ? ` <span class="status ok" title="Verifikasi dua langkah aktif">2FA</span>` : ""}</td>
+            <td>${u.role === "admin" ? `<span class="status ok">Admin</span>` : u.role === "agent" ? `<span class="agent-chip">Agen</span>` : `<span class="status muted">Pelanggan</span>`}${u.twofa ? ` <span class="status ok" title="Verifikasi dua langkah aktif">2FA</span>` : ""}</td>
             <td>${u.is_active ? `<span class="status ok">Aktif</span>` : `<span class="status bad">Nonaktif</span>`}</td>
             <td class="num"><a href="#" data-ledger="${esc(u.email)}" style="color:var(--primary)">${rupiah(u.balance)}</a></td>
             <td class="num">${num(u.orders)}</td><td class="num">${rupiah(u.spent)}</td>
@@ -972,7 +1077,7 @@
        ========================================================= */
     const TABS = {
       ringkasan: ["Ringkasan", tabRingkasan], pesanan: ["Pesanan", () => tabPesanan(false)], refund: ["Refund", () => tabPesanan(true)],
-      produk: ["Produk & Harga", tabProduk], digital: ["Produk Digital", tabDigital], pengguna: ["Pengguna", tabPengguna], supplier: ["Supplier", tabSupplier]
+      produk: ["Produk & Harga", tabProduk], digital: ["Produk Digital", tabDigital], agen: ["Agen", tabAgen], pengguna: ["Pengguna", tabPengguna], supplier: ["Supplier", tabSupplier]
     };
     let current = null;
     async function go(tab, push = true) {
@@ -1008,7 +1113,7 @@
 
     // Muat saldo & jumlah refund untuk header, lalu buka tab dari URL
     if (location.hash.slice(1) !== "ringkasan" && location.hash) {
-      api("admin/dashboard.php").then((d) => { setSupplierChip(d.supplier); setRefundCount(d.alerts.refund_pending); setDigitalCount(d.alerts.digital_waiting); }).catch(() => {});
+      api("admin/dashboard.php").then((d) => { setSupplierChip(d.supplier); setRefundCount(d.alerts.refund_pending); setDigitalCount(d.alerts.digital_waiting); setAgentCount(d.alerts.agents_pending); }).catch(() => {});
     }
     go(location.hash.slice(1) || "ringkasan", false);
   });

@@ -13,13 +13,19 @@ final class OrderService
     /* =========================================================
        KATALOG
        ========================================================= */
-    public static function catalog(): array
+    /** @param array|null $user pengguna yang login — agen mendapat harga agen */
+    public static function catalog(?array $user = null): array
     {
+        $agent = Agent::is($user);
         $cats = Db::all('SELECT id, name, description AS `desc`, icon FROM categories ORDER BY sort_order');
         $brands = Db::all('SELECT * FROM brands WHERE is_active = 1 ORDER BY sort_order, name');
-        $items = Db::all("SELECT brand_id, sku, name, price_sell FROM products WHERE is_active = 1 AND supplier_ok = 1 AND (price_sell > 0 OR brand_id IN (SELECT id FROM brands WHERE type = 'postpaid')) ORDER BY sort_order, price_sell");
+        $items = Db::all("SELECT brand_id, sku, name, price_modal, price_sell, price_agent FROM products WHERE is_active = 1 AND supplier_ok = 1 AND (price_sell > 0 OR brand_id IN (SELECT id FROM brands WHERE type = 'postpaid')) ORDER BY sort_order, price_sell");
         $byBrand = [];
-        foreach ($items as $it) $byBrand[$it['brand_id']][] = ['sku' => $it['sku'], 'name' => $it['name'], 'price' => (int)$it['price_sell']];
+        foreach ($items as $it) {
+            $row = ['sku' => $it['sku'], 'name' => $it['name'], 'price' => $agent ? Agent::price($it) : (int)$it['price_sell']];
+            if ($agent) $row['normal'] = (int)$it['price_sell'];
+            $byBrand[$it['brand_id']][] = $row;
+        }
 
         $products = [];
         foreach ($brands as $b) {
@@ -42,14 +48,14 @@ final class OrderService
                 ],
             ];
             if ($b['type'] === 'postpaid') {
-                $p['admin'] = (int)$b['admin_fee'];
+                $p['admin'] = Agent::adminFeeFor($user, $b);
             } else {
                 $p['items'] = $list;
             }
             $products[] = $p;
         }
         array_unshift($cats, ['id' => 'all', 'name' => 'Semua']);
-        return ['categories' => $cats, 'products' => $products, 'payments' => PaymentFactory::methods()];
+        return ['categories' => $cats, 'products' => $products, 'payments' => PaymentFactory::methods(), 'agent' => $agent];
     }
 
     /* =========================================================
@@ -119,12 +125,13 @@ final class OrderService
         $r = SupplierFactory::make()->inquiry($product['sku'], $target, $invoice);
         if (!$r['ok']) throw new HttpError($r['message'] ?: 'Tagihan tidak ditemukan.', 422, ['field' => 'customer_no']);
 
-        // Harga ke pelanggan = total tagihan (termasuk admin resmi) + admin tambahan kita
-        $price = (int)$r['bill'] + (int)$brand['admin_fee'];
+        // Harga ke pelanggan = total tagihan (termasuk admin resmi) + admin tambahan kita (agen bisa lebih murah)
+        $adminFee = Agent::adminFeeFor($user, $brand);
+        $price = (int)$r['bill'] + $adminFee;
         Db::insert(
-            "INSERT INTO orders (invoice, user_id, brand_id, product_id, sku, product_name, brand_name, customer_no, customer_name, bill_info, type, price, total, supplier_price, status, supplier, supplier_ref)
-             VALUES (?,?,?,?,?,?,?,?,?,?, 'postpaid', ?, ?, ?, 'inquiry', ?, ?)",
-            [$invoice, $user['id'], $brand['id'], $product['id'], $product['sku'], 'Tagihan' . ($r['period'] ? ' ' . self::period($r['period']) : ''),
+            "INSERT INTO orders (invoice, user_id, is_agent, brand_id, product_id, sku, product_name, brand_name, customer_no, customer_name, bill_info, type, price, total, supplier_price, status, supplier, supplier_ref)
+             VALUES (?,?,?,?,?,?,?,?,?,?,?, 'postpaid', ?, ?, ?, 'inquiry', ?, ?)",
+            [$invoice, $user['id'], Agent::is($user) ? 1 : 0, $brand['id'], $product['id'], $product['sku'], 'Tagihan' . ($r['period'] ? ' ' . self::period($r['period']) : ''),
              $brand['name'], $target, $r['customer_name'], json_encode($r['detail'] ?? [], JSON_UNESCAPED_UNICODE), $price, $price, $r['amount'], SupplierFactory::make()->name(), $invoice]
         );
         return [
@@ -132,7 +139,7 @@ final class OrderService
             'customer_name' => $r['customer_name'],
             'period'        => $r['period'] ? self::period($r['period']) : null,
             'bill'          => (int)$r['bill'],
-            'admin'         => (int)$brand['admin_fee'],
+            'admin'         => $adminFee,
             'amount'        => $price,
         ];
     }
@@ -185,12 +192,13 @@ final class OrderService
             $brand = Db::one('SELECT * FROM brands WHERE id = ?', [$product['brand_id']]);
             $target = self::normalizeTarget($brand, (string)($in['customer_no'] ?? ''));
             $invoice = self::newInvoice();
+            $price = Agent::priceFor($user, $product); // agen → harga agen; lainnya → harga jual umum
             Db::insert(
-                "INSERT INTO orders (invoice, user_id, brand_id, product_id, sku, product_name, brand_name, customer_no, customer_name, type, price, total, supplier_price, status, supplier, supplier_ref)
-                 VALUES (?,?,?,?,?,?,?,?,?, 'prepaid', ?, ?, ?, 'inquiry', ?, ?)",
-                [$invoice, $user['id'], $brand['id'], $product['id'], $product['sku'], $product['name'], $product['brand_name'], $target,
+                "INSERT INTO orders (invoice, user_id, is_agent, brand_id, product_id, sku, product_name, brand_name, customer_no, customer_name, type, price, total, supplier_price, status, supplier, supplier_ref)
+                 VALUES (?,?,?,?,?,?,?,?,?,?, 'prepaid', ?, ?, ?, 'inquiry', ?, ?)",
+                [$invoice, $user['id'], Agent::is($user) ? 1 : 0, $brand['id'], $product['id'], $product['sku'], $product['name'], $product['brand_name'], $target,
                  isset($in['customer_name']) && is_string($in['customer_name']) ? mb_substr($in['customer_name'], 0, 120) : null,
-                 (int)$product['price_sell'], (int)$product['price_sell'], (int)$product['price_modal'], SupplierFactory::make()->name(), $invoice]
+                 $price, $price, (int)$product['price_modal'], SupplierFactory::make()->name(), $invoice]
             );
             $order = Db::one('SELECT * FROM orders WHERE invoice = ?', [$invoice]);
         }
@@ -265,6 +273,7 @@ final class OrderService
         );
         if ($st->rowCount() !== 1) return; // sudah diproses sebelumnya
         if (($order['kind'] ?? 'ppob') === 'digital') { DigitalService::fulfill((int)$order['id']); return; }
+        if (($order['kind'] ?? 'ppob') === 'deposit') { Agent::completeDeposit((int)$order['id']); return; }
 
         $ref = $order['supplier_ref'] ?: $order['invoice'];
         $supplier = SupplierFactory::make();
@@ -474,6 +483,7 @@ final class OrderService
             'refund_status' => $o['refund_status'],
             'refund_method' => $o['refund_method'] ?? null,
             'kind'          => $o['kind'] ?? 'ppob',
+            'is_agent'      => (bool)($o['is_agent'] ?? false),
             'buyer_note'    => $o['buyer_note'] ?? null,
             'delivery'      => ($o['kind'] ?? 'ppob') === 'digital' && $o['status'] === 'success' ? DigitalService::deliveryFor($o) : null,
             'retry_count'   => (int)($o['retry_count'] ?? 0),

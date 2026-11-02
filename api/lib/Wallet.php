@@ -50,7 +50,7 @@ final class Wallet
             "SELECT l.type, l.amount, l.balance_after, l.note, l.created_by, l.created_at, o.invoice
              FROM wallet_ledger l LEFT JOIN orders o ON o.id = l.order_id
              WHERE l.user_id = ? ORDER BY l.id DESC LIMIT {$limit}", [$userId]);
-        $labels = ['refund' => 'Refund', 'payment' => 'Pembayaran', 'refund_reversal' => 'Pembatalan refund', 'adjust' => 'Penyesuaian'];
+        $labels = ['refund' => 'Refund', 'payment' => 'Pembayaran', 'refund_reversal' => 'Pembatalan refund', 'adjust' => 'Penyesuaian', 'deposit' => 'Deposit'];
         return array_map(fn($r) => [
             'type' => $r['type'], 'label' => $labels[$r['type']] ?? $r['type'], 'amount' => (int)$r['amount'],
             'balance_after' => (int)$r['balance_after'], 'note' => $r['note'], 'invoice' => $r['invoice'],

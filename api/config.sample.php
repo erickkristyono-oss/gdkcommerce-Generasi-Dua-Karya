@@ -98,6 +98,24 @@ return [
         // 'storage' => '/home/u123456789/gdk-files',
     ],
 
+    /* -------------------------------------------------------
+     * Program Agen
+     *  - Pengguna mengajukan dari halaman Akun, admin menyetujui di Panel Admin → Agen.
+     *  - Agen melihat harga agen dan bisa deposit Saldo GDK.
+     *  Bagian ini opsional: bila tidak ada, nilai di bawah ini dipakai sebagai default.
+     * ----------------------------------------------------- */
+    'agent' => [
+        'enabled'     => true,
+        // Harga agen otomatis (bila harga agen produk tidak diisi manual di Panel Admin):
+        //   modal + margin_share % dari laba harga umum, dibulatkan ke atas kelipatan 'round'.
+        //   Contoh 50: modal 10.000, harga umum 11.000 → harga agen 10.500.
+        // Selalu di antara harga modal dan harga jual umum.
+        'margin_share' => 50,
+        'round'        => 50,
+        'deposit_min' => 10000,
+        'deposit_max' => 10000000,
+    ],
+
     'limits' => [
         'max_unpaid_orders' => 5,   // per pengguna
         'login_attempts'    => 5,   // per 15 menit

@@ -320,6 +320,9 @@
     grid.innerHTML = skeleton(10);
     try { await loadCatalog(); } catch (e) { grid.innerHTML = loadError(e); return; }
 
+    if (CATALOG.agent && !$("#agentBanner")) {
+      grid.insertAdjacentHTML("beforebegin", `<div class="agent-banner" id="agentBanner"><span class="ic">${I.shield}</span><div><b>Harga Agen aktif</b><small>Semua harga di bawah sudah memakai harga khusus agen. Bayar pakai Saldo GDK untuk transaksi instan tanpa biaya.</small></div><a href="akun.html#agen" class="btn-outline btn-xs">Deposit Saldo</a></div>`);
+    }
     let cat = params.get("cat") || "all";
     if (!CATALOG.categories.some((c) => c.id === cat)) cat = "all";
     tabs.innerHTML = CATALOG.categories.map((c) => `<button class="tab ${c.id === cat ? "active" : ""}" data-cat="${esc(c.id)}">${esc(c.name)}</button>`).join("");
@@ -410,7 +413,7 @@
         extra = `<div class="field"><button type="button" class="btn-outline" id="btnInquiry">Cek Tagihan</button><div id="billInfo"></div></div>`;
       } else {
         extra = (p.checkName ? `<div class="field" style="margin-top:-6px"><button type="button" class="btn-outline" id="btnCheckName" style="padding:9px 16px;font-size:14px">Cek Nama Pelanggan</button><div id="nameInfo"></div></div>` : "") +
-          `<div class="field"><label>Pilih Nominal</label><div class="opt-grid" id="optItems">${p.items.map((it, i) => `<button type="button" class="opt" data-i="${i}"><b>${esc(it.name)}</b><span>${rupiah(it.price)}</span></button>`).join("")}</div></div>`;
+          `<div class="field"><label>Pilih Nominal${CATALOG.agent ? ` <span class="agent-chip">Harga Agen</span>` : ""}</label><div class="opt-grid" id="optItems">${p.items.map((it, i) => `<button type="button" class="opt" data-i="${i}"><b>${esc(it.name)}</b><span>${rupiah(it.price)}</span>${it.normal > it.price ? `<s class="opt-normal">${rupiah(it.normal)}</s>` : ""}</button>`).join("")}</div></div>`;
       }
 
       card.innerHTML = `
@@ -559,8 +562,9 @@
     const render = (o) => {
       const pay = o.payment;
       const statusIcon = o.status === "success" ? I.check : o.status === "failed" || o.status === "expired" ? I.close : I.clock;
+      const dep = o.kind === "deposit";
       const heading = {
-        unpaid: "Selesaikan Pembayaran", processing: o.kind === "digital" ? "Pesanan Sedang Disiapkan" : "Pesanan Sedang Diproses", success: "Transaksi Berhasil",
+        unpaid: "Selesaikan Pembayaran", processing: o.kind === "digital" ? "Pesanan Sedang Disiapkan" : dep ? "Deposit Sedang Diproses" : "Pesanan Sedang Diproses", success: dep ? "Deposit Berhasil" : "Transaksi Berhasil",
         failed: "Transaksi Gagal", expired: "Pembayaran Kedaluwarsa"
       }[o.status] || o.status_label;
       const sub = {
@@ -568,7 +572,9 @@
         processing: o.kind === "digital"
           ? "Pembayaran diterima. Tim kami sedang menyiapkan produk Anda (maks. 1×24 jam). Produk akan muncul di halaman ini dan di riwayat transaksi."
           : "Pembayaran diterima. Produk sedang dikirim ke tujuan — halaman ini diperbarui otomatis.",
-        success: o.kind === "digital" ? "Pembayaran berhasil. Produk Anda sudah siap di bawah ini." : `Produk telah dikirim ke <b>${esc(o.customer_no)}</b>.`,
+        success: o.kind === "digital" ? "Pembayaran berhasil. Produk Anda sudah siap di bawah ini."
+          : dep ? `Saldo <b>${rupiah(o.price)}</b> sudah masuk ke <a href="akun.html#saldo" style="color:var(--primary)">Saldo GDK</a> Anda dan siap dipakai bertransaksi.`
+          : `Produk telah dikirim ke <b>${esc(o.customer_no)}</b>.`,
         failed: `${esc(o.message || "Transaksi tidak dapat diproses oleh penyedia.")}<br>${o.refund_status === "done" && o.refund_method === "saldo"
           ? `Dana <b>${rupiah(o.total)}</b> sudah dikembalikan ke <a href="akun.html#saldo" style="color:var(--primary)">Saldo GDK</a> Anda dan bisa langsung dipakai.`
           : "Dana Anda akan dikembalikan. Tim kami akan menghubungi Anda."}`,
@@ -592,11 +598,11 @@
             ${payBox}
             ${o.kind === "digital" && o.status === "success" ? deliveryHtml(o.delivery) : ""}
             ${o.status === "success" && o.sn && o.kind !== "digital" ? `<div class="pay-code"><small>Serial Number / Token</small><div><b style="font-size:16px;word-break:break-all">${esc(o.sn)}</b><button class="btn-outline copy" data-copy="${esc(o.sn)}">Salin</button></div></div>` : ""}
-            ${o.status === "processing" && o.kind !== "digital" ? `<div class="progress"><span></span></div>` : ""}
-            ${pay.simulate ? `<div class="sim-box"><b>Mode Demo — Payment Gateway Dummy</b><p>Belum ada gateway asli yang terhubung. Klik tombol di bawah untuk mensimulasikan pelanggan membayar. Pesanan akan langsung diteruskan ke supplier.</p><button class="btn-primary" id="btnSim">Simulasikan Pembayaran <span class="arrow">${I.arrow}</span></button></div>` : ""}
+            ${o.status === "processing" && o.kind === "ppob" ? `<div class="progress"><span></span></div>` : ""}
+            ${pay.simulate ? `<div class="sim-box"><b>Mode Demo — Payment Gateway Dummy</b><p>Belum ada gateway asli yang terhubung. Klik tombol di bawah untuk mensimulasikan pembayaran. ${dep ? "Saldo akan langsung ditambahkan (saldo uji coba)." : "Pesanan akan langsung diteruskan ke supplier."}</p><button class="btn-primary" id="btnSim">Simulasikan Pembayaran <span class="arrow">${I.arrow}</span></button></div>` : ""}
             <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:22px">
               <a href="akun.html" class="btn-outline">Riwayat Transaksi</a>
-              ${["success", "failed", "expired"].includes(o.status) ? `<a href="produk.html" class="btn-outline">Beli Lagi</a>` : ""}
+              ${dep ? (o.status === "success" ? `<a href="produk.html" class="btn-outline">Mulai Transaksi</a>` : "") : ["success", "failed", "expired"].includes(o.status) ? `<a href="produk.html" class="btn-outline">Beli Lagi</a>` : ""}
             </div>
           </div>
           <aside class="panel">
@@ -605,7 +611,8 @@
               <div><span>Status</span><span class="status ${STATUS_CLS[o.status] || ""}">${esc(o.status_label)}</span></div>
               <div><span>Produk</span><span>${esc(o.brand)}</span></div>
               <div><span>Item</span><span>${esc(o.item)}</span></div>
-              ${o.kind === "digital" ? (o.buyer_note ? `<div><span>Catatan Anda</span><span>${esc(o.buyer_note)}</span></div>` : "") : `<div><span>Tujuan</span><span>${esc(o.customer_no)}</span></div>`}
+              ${o.kind === "digital" ? (o.buyer_note ? `<div><span>Catatan Anda</span><span>${esc(o.buyer_note)}</span></div>` : "") : dep ? "" : `<div><span>Tujuan</span><span>${esc(o.customer_no)}</span></div>`}
+              ${o.is_agent && !dep ? `<div><span>Harga</span><span class="agent-chip">Harga Agen</span></div>` : ""}
               ${o.customer_name ? `<div><span>Nama</span><span>${esc(o.customer_name)}</span></div>` : ""}
               <div><span>Harga</span><span>${rupiah(o.price)}</span></div>
               <div><span>Biaya pembayaran</span><span>${rupiah(o.fee)}</span></div>
@@ -784,8 +791,11 @@
     const user = Auth.user;
     if (!user) { location.replace("login.html?next=akun.html"); return; }
     root.innerHTML = `<div class="empty">Memuat data akun…</div>`;
-    let d, w;
-    try { [d, w] = await Promise.all([api("orders.php"), api("wallet.php")]); } catch (e) { root.innerHTML = loadError(e); return; }
+    let d, w, ag;
+    try { [d, w, ag] = await Promise.all([api("orders.php"), api("wallet.php"), user.role === "admin" ? Promise.resolve(null) : api("agent.php")]); } catch (e) { root.innerHTML = loadError(e); return; }
+    const agent = ag && ag.agent;
+    const isAgent = agent && agent.status === "approved";
+    if (isAgent) { const h = $(".page-hero h1"); if (h) h.textContent = "Dashboard Agen"; }
     const orders = d.orders;
     const refundBadge = (o) => o.refund_status === "done" ? `<br><small class="status ok" style="margin-top:4px">${o.refund_method === "saldo" ? "Refund ke saldo" : "Sudah direfund"}</small>`
       : o.refund_status === "pending" ? `<br><small class="status wait" style="margin-top:4px">Refund diproses</small>` : "";
@@ -794,10 +804,11 @@
       <div class="acc-grid">
         <aside class="acc-side">
           <div class="panel reveal">
-            <div class="profile-head"><span class="avatar">${esc(user.name.charAt(0).toUpperCase())}</span><div><b>${esc(user.name)}</b><small>Member sejak ${new Date(user.created_at).toLocaleDateString("id-ID", { month: "long", year: "numeric" })}</small></div></div>
+            <div class="profile-head"><span class="avatar">${esc(user.name.charAt(0).toUpperCase())}</span><div><b>${esc(user.name)}${isAgent ? ` <span class="agent-chip">Agen</span>` : ""}</b><small>${isAgent && agent.store ? esc(agent.store) + " · " : ""}Member sejak ${new Date(user.created_at).toLocaleDateString("id-ID", { month: "long", year: "numeric" })}</small></div></div>
             <div class="wallet-card" id="saldo">
-              <small>Saldo GDK</small><b>${rupiah(w.balance)}</b>
-              <span>Refund otomatis masuk ke sini & bisa dipakai bayar tanpa biaya.</span>
+              <small>${isAgent ? "Saldo Deposit Agen" : "Saldo GDK"}</small><b>${rupiah(w.balance)}</b>
+              <span>${isAgent ? "Isi saldo lewat Deposit, lalu bayar transaksi pakai Saldo GDK — instan & tanpa biaya." : "Refund otomatis masuk ke sini & bisa dipakai bayar tanpa biaya."}</span>
+              ${isAgent ? `<button class="btn-wallet" data-deposit>+ Deposit Saldo</button>` : ""}
             </div>
             <div class="kv">
               <div><span>Email</span><span>${esc(user.email)}</span></div>
@@ -810,17 +821,18 @@
               <button class="btn-outline" data-logout>Keluar</button>
             </div>
           </div>
+          ${agent && agent.enabled !== false ? `<div class="panel reveal d1" id="agen"></div>` : ""}
           <div class="panel reveal d1" id="securityPanel"></div>
         </aside>
         <div class="acc-main">
           <section class="panel reveal d1">
-            <h2>Riwayat Transaksi</h2>
+            <h2>Riwayat Transaksi</h2>${isAgent ? `<p class="acc-sub">Transaksi bertanda <span class="agent-chip">Agen</span> dibeli dengan harga agen.</p>` : ""}
             ${orders.length ? `<div class="table-wrap"><table class="tx">
               <thead><tr><th>Invoice</th><th>Produk</th><th>Tujuan</th><th>Total</th><th>Status</th><th>Tanggal</th></tr></thead>
               <tbody>${orders.map((o) => `<tr>
                 <td><a href="pembayaran.html?invoice=${encodeURIComponent(o.invoice)}" style="color:var(--primary)"><b>${esc(o.invoice)}</b></a><br><small style="color:var(--muted)">${esc(o.payment.name || "")}</small></td>
-                <td>${esc(o.brand)}<br><small style="color:var(--muted)">${esc(o.item)}</small></td>
-                <td>${esc(o.customer_no)}${o.sn ? `<br><small style="color:var(--muted);word-break:break-all">SN: ${esc(o.sn)}</small>` : ""}</td>
+                <td>${esc(o.brand)}${o.is_agent && o.kind !== "deposit" ? ` <span class="agent-chip">Agen</span>` : ""}<br><small style="color:var(--muted)">${esc(o.item)}</small></td>
+                <td>${o.kind === "deposit" ? `<small style="color:var(--muted)">Saldo GDK</small>` : esc(o.customer_no)}${o.sn ? `<br><small style="color:var(--muted);word-break:break-all">SN: ${esc(o.sn)}</small>` : ""}</td>
                 <td><b>${rupiah(o.total)}</b></td>
                 <td><span class="status ${STATUS_CLS[o.status] || ""}">${esc(o.status_label)}</span>${refundBadge(o)}</td>
                 <td>${fmtDate(o.created_at)}</td>
@@ -852,9 +864,142 @@
       t.closest(".table-wrap").after(btn);
     });
     renderSecurity($("#securityPanel"));
+    if ($("#agen")) AgentUI.render($("#agen"), agent);
+    $$("[data-deposit]", root).forEach((b) => b.addEventListener("click", () => AgentUI.deposit(agent)));
     initReveal();
-    if (location.hash === "#saldo") setTimeout(() => $("#saldo").scrollIntoView({ behavior: "smooth", block: "center" }), 300);
+    const jump = { "#saldo": "#saldo", "#agen": "#agen" }[location.hash];
+    if (jump && $(jump)) setTimeout(() => $(jump).scrollIntoView({ behavior: "smooth", block: "center" }), 300);
   }
+
+  /* =========================================================
+     PROGRAM AGEN (halaman akun)
+     ========================================================= */
+  const AgentUI = {
+    render(panel, a) {
+      const benefits = `<ul class="agent-benefits">
+          <li>${I.check}<span><b>Harga agen</b> lebih murah untuk semua pulsa, paket data, token PLN, voucher game &amp; e-wallet</span></li>
+          <li>${I.check}<span><b>Deposit saldo</b> — transaksi langsung potong saldo, instan &amp; tanpa biaya pembayaran</span></li>
+          <li>${I.check}<span>Jual kembali ke pelanggan Anda dengan harga yang Anda tentukan sendiri</span></li>
+        </ul>`;
+      if (a.status === "approved") {
+        const s = a.stats || { today: {}, month: {} };
+        panel.innerHTML = `<h2>Dashboard Agen</h2>
+          <div class="sec-row"><span class="ic">${I.shield}</span><div><b>${esc(a.store || "Agen GDK")}</b><small>${esc(a.city || "")}${a.approved_at ? " · agen sejak " + new Date(a.approved_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }) : ""}</small></div><span class="status ok">Aktif</span></div>
+          <div class="agent-stats">
+            <div><small>Transaksi hari ini</small><b>${s.today.count || 0}</b><span>${rupiah(s.today.total || 0)}</span></div>
+            <div><small>Transaksi bulan ini</small><b>${s.month.count || 0}</b><span>${rupiah(s.month.total || 0)}</span></div>
+          </div>
+          <p class="acc-sub" style="margin:0 0 14px">Deposit bulan ini: <b>${rupiah(s.deposit_month || 0)}</b></p>
+          <div style="display:grid;gap:10px">
+            <button class="btn-primary block" data-deposit-btn>Deposit Saldo <span class="arrow">${I.arrow}</span></button>
+            <a href="produk.html" class="btn-outline" style="text-align:center">Lihat Harga Agen</a>
+          </div>`;
+        $("[data-deposit-btn]", panel).addEventListener("click", () => this.deposit(a));
+        return;
+      }
+      if (a.status === "pending") {
+        panel.innerHTML = `<h2>Program Agen</h2>
+          <div class="sec-row"><span class="ic">${I.clock}</span><div><b>Pengajuan sedang ditinjau</b><small>${esc(a.store || "")}${a.city ? " · " + esc(a.city) : ""}${a.applied_at ? " · dikirim " + fmtDate(a.applied_at) : ""}</small></div><span class="status wait">Menunggu</span></div>
+          <div class="note-sm info">Admin akan meninjau pengajuan Anda maksimal 1×24 jam. Setelah disetujui, harga agen langsung aktif di akun ini.</div>`;
+        return;
+      }
+      panel.innerHTML = `<h2>Jadi Agen GDK</h2>
+        ${a.status === "rejected" ? `<div class="note-sm" style="margin-bottom:14px"><b>Pengajuan sebelumnya belum disetujui.</b>${a.admin_note ? "<br>Alasan: " + esc(a.admin_note) : ""}<br>Anda bisa mengajukan kembali.</div>` : ""}
+        <p class="acc-sub" style="margin:0 0 10px">Punya konter, warung, atau ingin usaha sampingan? Daftar jadi agen dan jual produk GDK Commerce ke pelanggan Anda.</p>
+        ${benefits}
+        <button class="btn-primary block" id="btnApply">${a.status === "rejected" ? "Ajukan Lagi" : "Daftar Jadi Agen"} <span class="arrow">${I.arrow}</span></button>`;
+      $("#btnApply", panel).addEventListener("click", () => this.applyForm(panel, a));
+    },
+
+    applyForm(panel, a) {
+      const card = Dialog.open(`<div class="modal-head"><div><h3>Daftar Jadi Agen</h3><small>Diisi sekali, ditinjau admin maks. 1×24 jam</small></div><button class="modal-close" data-close aria-label="Tutup">${I.close}</button></div>
+        <form id="agForm" novalidate>
+          <div class="field"><label for="agStore">Nama toko / usaha</label><input id="agStore" name="store" maxlength="100" placeholder="mis. Konter Berkah Cell" value="${esc(a.store || "")}"><span class="err">Minimal 3 karakter</span></div>
+          <div class="field"><label for="agCity">Kota / kabupaten</label><input id="agCity" name="city" maxlength="100" placeholder="mis. Bekasi" value="${esc(a.city || "")}"><span class="err">Minimal 3 karakter</span></div>
+          <div class="field"><label for="agNote">Ceritakan usaha Anda <small style="color:var(--muted);font-weight:400">(opsional)</small></label><textarea id="agNote" name="note" maxlength="500" placeholder="mis. Konter pulsa sejak 2020, ±50 transaksi per hari" style="min-height:80px"></textarea></div>
+          <div class="field"><label class="check-row"><input type="checkbox" name="agree"> <span>Saya memahami bahwa saldo deposit hanya dipakai untuk bertransaksi di GDK Commerce dan menyetujui <a href="syarat-ketentuan.html" target="_blank">Syarat &amp; Ketentuan</a>.</span></label><span class="err">Wajib disetujui</span></div>
+          <button type="submit" class="btn-primary block">Kirim Pengajuan <span class="arrow">${I.arrow}</span></button>
+        </form>`);
+      const form = $("#agForm", card);
+      setTimeout(() => form.store.focus(), 50);
+      $$("input,textarea", form).forEach((i) => i.addEventListener("input", () => i.closest(".field").classList.remove("invalid")));
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const bad = (name, msg) => { const f = form.elements[name].closest(".field"); if (msg) $(".err", f).textContent = msg; f.classList.add("invalid"); };
+        let ok = true;
+        if (form.store.value.trim().length < 3) { bad("store"); ok = false; }
+        if (form.city.value.trim().length < 3) { bad("city"); ok = false; }
+        if (!form.agree.checked) { bad("agree"); ok = false; }
+        if (!ok) return;
+        const btn = $("button[type=submit]", form); btn.disabled = true;
+        try {
+          const r = await api("agent.php", { method: "POST", body: { action: "apply", store: form.store.value.trim(), city: form.city.value.trim(), note: form.note.value.trim(), agree: true } });
+          Dialog.close(); toast(r.message, "ok");
+          this.render(panel, r.agent);
+        } catch (err) {
+          if (err.field && form.elements[err.field]) bad(err.field, err.message); else toast(err.message, "err");
+          btn.disabled = false;
+        }
+      });
+    },
+
+    async deposit(a) {
+      let cat;
+      try { cat = await loadCatalog(); } catch (e) { toast(e.message, "err"); return; }
+      const methods = cat.payments.filter((m) => m.kind !== "balance");
+      const lim = a.deposit || { min: 10000, max: 10000000, presets: [50000, 100000, 250000, 500000, 1000000, 2000000] };
+      let pay = null, amount = 0;
+      const card = Dialog.open(`<div class="modal-head"><div><h3>Deposit Saldo</h3><small>Saldo masuk otomatis setelah pembayaran berhasil</small></div><button class="modal-close" data-close aria-label="Tutup">${I.close}</button></div>
+        <form id="depForm" novalidate>
+          <div class="field"><label>Pilih nominal</label>
+            <div class="opt-grid" id="depPresets">${lim.presets.filter((v) => v >= lim.min && v <= lim.max).map((v) => `<button type="button" class="opt" data-v="${v}"><b>${rupiah(v)}</b></button>`).join("")}</div></div>
+          <div class="field" id="fDepAmt"><label for="depAmt">Atau ketik nominal</label><input id="depAmt" inputmode="numeric" placeholder="mis. 300000">
+            <span class="hint">Min. ${rupiah(lim.min)} · maks. ${rupiah(lim.max)} · kelipatan Rp 1.000</span><span class="err"></span></div>
+          <div class="field"><label>Metode pembayaran</label>
+            <div class="pay-grid" id="depPay">${methods.map((m) => `<button type="button" class="opt" data-pay="${esc(m.id)}"><i style="background:${esc(m.color)}">${esc(m.name.replace("VA ", "").slice(0, 4))}</i>${esc(m.name)}</button>`).join("")}</div></div>
+          <div class="summary" id="depSum"></div>
+          <button type="submit" class="btn-primary block">Lanjut Bayar <span class="arrow">${I.arrow}</span></button>
+        </form>`);
+      const form = $("#depForm", card), inp = $("#depAmt", card), fAmt = $("#fDepAmt", card);
+      const fee = () => (!pay || !amount ? 0 : pay.fee < 1 ? Math.ceil(amount * pay.fee) : pay.fee);
+      const sum = () => {
+        $("#depSum", card).innerHTML = `<div><span>Saldo yang masuk</span><span>${amount ? rupiah(amount) : "-"}</span></div>
+          <div><span>Biaya pembayaran${pay ? " (" + esc(pay.name) + ")" : ""}</span><span>${pay && amount ? rupiah(fee()) : "-"}</span></div>
+          <div class="total"><span>Total Bayar</span><b>${amount ? rupiah(amount + fee()) : "-"}</b></div>`;
+      };
+      $("#depPresets", card).addEventListener("click", (e) => {
+        const b = e.target.closest(".opt"); if (!b) return;
+        $$("#depPresets .opt", card).forEach((o) => o.classList.toggle("active", o === b));
+        amount = +b.dataset.v; inp.value = amount.toLocaleString("id-ID"); fAmt.classList.remove("invalid"); sum();
+      });
+      inp.addEventListener("input", () => {
+        amount = parseInt(inp.value.replace(/\D/g, ""), 10) || 0;
+        $$("#depPresets .opt", card).forEach((o) => o.classList.toggle("active", +o.dataset.v === amount));
+        fAmt.classList.remove("invalid"); sum();
+      });
+      $("#depPay", card).addEventListener("click", (e) => {
+        const b = e.target.closest(".opt"); if (!b) return;
+        $$("#depPay .opt", card).forEach((o) => o.classList.toggle("active", o === b));
+        pay = methods.find((m) => m.id === b.dataset.pay); sum();
+      });
+      sum();
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const err = (m) => { $(".err", fAmt).textContent = m; fAmt.classList.add("invalid"); };
+        if (amount < lim.min || amount > lim.max) return err(`Nominal antara ${rupiah(lim.min)} dan ${rupiah(lim.max)}.`);
+        if (amount % 1000) return err("Nominal harus kelipatan Rp 1.000.");
+        if (!pay) return toast("Pilih metode pembayaran.", "err");
+        const btn = $("button[type=submit]", form); btn.disabled = true;
+        try {
+          const d = await api("agent.php", { method: "POST", body: { action: "deposit", amount, payment: pay.id } });
+          location.href = "pembayaran.html?invoice=" + encodeURIComponent(d.order.invoice);
+        } catch (er) {
+          if (er.field === "amount") err(er.message); else toast(er.message, "err");
+          btn.disabled = false;
+        }
+      });
+    }
+  };
 
   function renderSecurity(panel) {
     const u = Auth.user;

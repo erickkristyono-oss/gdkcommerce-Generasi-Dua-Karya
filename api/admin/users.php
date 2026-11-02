@@ -33,8 +33,9 @@ if ($method === 'POST') {
             $msg = $u['is_active'] ? 'Akun dinonaktifkan. Pengguna otomatis keluar.' : 'Akun diaktifkan kembali.';
             break;
         case 'make_admin':
-            Db::run("UPDATE users SET role = 'admin' WHERE id = ?", [$u['id']]); $msg = 'Pengguna dijadikan admin.'; break;
+            Db::run("UPDATE users SET role = 'admin', agent_status = 'none' WHERE id = ?", [$u['id']]); $msg = 'Pengguna dijadikan admin.'; break;
         case 'make_customer':
+            if ($u['role'] !== 'admin') throw new HttpError('Untuk mencabut status agen, gunakan tab Agen.', 409);
             Db::run("UPDATE users SET role = 'customer' WHERE id = ?", [$u['id']]); $msg = 'Akses admin dicabut.'; break;
         default:
             throw new HttpError('Aksi tidak dikenal.', 400);
@@ -56,8 +57,8 @@ if ($q !== '') { $where = '(u.name LIKE ? OR u.email LIKE ? OR u.phone LIKE ?)';
 $total = (int)Db::value("SELECT COUNT(*) FROM users u WHERE {$where}", $p);
 $rows = Db::all(
     "SELECT u.id, u.name, u.email, u.phone, u.role, u.is_active, u.balance, u.totp_enabled, u.created_at, u.last_login_at,
-            (SELECT COUNT(*) FROM orders o WHERE o.user_id = u.id AND o.status = 'success') AS orders_ok,
-            (SELECT COALESCE(SUM(total),0) FROM orders o WHERE o.user_id = u.id AND o.status = 'success') AS spent
+            (SELECT COUNT(*) FROM orders o WHERE o.user_id = u.id AND o.status = 'success' AND o.kind <> 'deposit') AS orders_ok,
+            (SELECT COALESCE(SUM(total),0) FROM orders o WHERE o.user_id = u.id AND o.status = 'success' AND o.kind <> 'deposit') AS spent
      FROM users u WHERE {$where} ORDER BY u.id DESC LIMIT {$per} OFFSET {$offset}", $p);
 Http::ok([
     'users' => array_map(fn($r) => [

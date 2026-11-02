@@ -52,7 +52,8 @@ final class Auth
         self::$loaded = true;
         $id = $_SESSION['uid'] ?? null;
         if (!$id) return null;
-        $u = Db::one('SELECT id, name, email, phone, balance, role, is_active, totp_enabled, recovery_codes, created_at FROM users WHERE id = ?', [$id]);
+        $u = Db::one('SELECT id, name, email, phone, balance, role, agent_status, agent_store, agent_city, agent_admin_note, agent_applied_at, agent_approved_at,
+                    is_active, totp_enabled, recovery_codes, created_at FROM users WHERE id = ?', [$id]);
         if (!$u || !$u['is_active']) {
             unset($_SESSION['uid']);
             return null;
@@ -115,6 +116,8 @@ final class Auth
             'email'      => $u['email'],
             'phone'      => $u['phone'],
             'role'       => $u['role'],
+            'agent'      => ($u['role'] ?? '') === 'agent' ? 'approved' : ($u['agent_status'] ?? 'none'),
+            'store'      => $u['agent_store'] ?? null,
             'balance'    => (int)($u['balance'] ?? 0),
             'twofa'      => (bool)($u['totp_enabled'] ?? false),
             'mfa'        => self::mfaVerified(),

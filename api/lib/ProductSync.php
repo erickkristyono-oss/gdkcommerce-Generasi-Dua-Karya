@@ -49,7 +49,8 @@ final class ProductSync
             'INSERT INTO products (brand_id, sku, name, price_modal, price_sell, is_active, supplier_ok, sort_order, synced_at)
              VALUES (:brand, :sku, :name, :modal, :sell, 1, :ok, :sort, NOW())
              ON DUPLICATE KEY UPDATE brand_id = VALUES(brand_id), name = VALUES(name), price_modal = VALUES(price_modal),
-               price_sell = IF(price_locked = 1, price_sell, VALUES(price_sell)), supplier_ok = VALUES(supplier_ok),
+               price_sell = IF(price_locked = 1, price_sell, VALUES(price_sell)),
+               price_agent = IF(price_locked = 1, price_agent, 0), supplier_ok = VALUES(supplier_ok),
                sort_order = VALUES(sort_order), synced_at = NOW()'
         );
 

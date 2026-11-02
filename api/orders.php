@@ -34,7 +34,7 @@ foreach ($rows as $i => $r) {
         $refreshed++;
     }
 }
-$stats = Db::one("SELECT COUNT(*) AS n, COALESCE(SUM(total),0) AS spent FROM orders WHERE user_id = ? AND status = 'success'", [$user['id']]);
+$stats = Db::one("SELECT COUNT(*) AS n, COALESCE(SUM(total),0) AS spent FROM orders WHERE user_id = ? AND status = 'success' AND kind <> 'deposit'", [$user['id']]);
 Http::ok([
     'orders' => array_map([OrderService::class, 'present'], $rows),
     'stats'  => ['success' => (int)$stats['n'], 'spent' => (int)$stats['spent']],
